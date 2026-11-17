@@ -1,0 +1,56 @@
+name: Render educational 3D animation
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenes:
+        description: "Limit number of scenes (blank = all 30)"
+        required: false
+        default: ""
+  push:
+    paths:
+      - "src/**"
+      - "build.sh"
+      - "verify.sh"
+      - ".github/workflows/render.yml"
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install ffmpeg + Myanmar fonts
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-myanmar curl
+          sudo mkdir -p /usr/share/fonts/truetype/notomyanmar
+          sudo curl -fsSL -o /usr/share/fonts/truetype/notomyanmar/NotoSansMyanmar.ttf \
+            "https://github.com/google/fonts/raw/main/ofl/notosansmyanmar/NotoSansMyanmar%5Bwdth,wght%5D.ttf"
+          sudo fc-cache -f >/dev/null
+          ffmpeg -hide_banner -filters | grep -q " subtitles " && echo "libass OK"
+
+      - name: Render video
+        run: |
+          if [ -n "${{ github.event.inputs.scenes }}" ]; then
+            export LIMIT_SCENES="${{ github.event.inputs.scenes }}"
+          fi
+          bash build.sh
+
+      - name: Verify output
+        run: bash verify.sh build/out.mp4
+
+      - name: Upload video
+        uses: actions/upload-artifact@v4
+        with:
+          name: educational-3d-animation-480p
+          path: build/out.mp4
+          if-no-files-found: error
+          retention-days: 14

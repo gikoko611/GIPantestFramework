@@ -1,0 +1,11 @@
+# build artifacts
+build/
+*.mp4
+*.wav
+*.png
+!assets/**/*.png
+
+# generated subtitles
+build/subs.ass
+
+node_modules/
